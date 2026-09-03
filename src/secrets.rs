@@ -1,17 +1,7 @@
-//! 스토리 핵심 스포일러(메일 본문, 정체불명 개체 이름 placeholder)만 따로 모아둔
-//! 파일 — `strings.rs`의 나머지 UI 문구(버튼/라벨 등)는 그냥 평문이어도 상관없지만,
-//! 여기 있는 상수들은 실행 파일에 평문으로 남아있으면 `strings.exe` 한 번만 돌려도
-//! ARG 정답/떡밥이 그대로 새어나간다. 나중에 안티 리버싱(문자열 암호화) 작업을 붙일
-//! 때 이 파일 하나만 손대면 되도록 의도적으로 분리해뒀다.
-
 use crate::strings::S;
 
-// foundation.rs::FileSystem::new() 의 Photos 앱 이름이자, mail.rs 메일 본문에서도
-// 같은 개체를 가리키는 데 쓰인다 — 두 곳이 반드시 같은 문자열이어야 하므로 상수로
-// 공유한다.
 pub const PHOTOS_APP_NAME: &str = "ЫЩЁЪЭ";
 
-// 아직 별도 기능은 없고 메일 본문에서만 언급되는, 나중을 위한 떡밥용 개체 이름.
 pub const UNNAMED_ENTITY: &str = "ЖЦЧШЮЯФ";
 
 pub const PALACE_MAIL_SUBJECT: S = S {
