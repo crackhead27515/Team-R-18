@@ -9,8 +9,8 @@ use crate::apps::{
     refresh_photos_feed, CreditsApp, ExplorerApp, ExplorerLocation, HexToolApp, MailApp, MoveDest, OfficialSiteApp, Opened, PhotoViewerApp,
     SettingsApp,
 };
-use crate::foundation::{display_name, FileId, FileKind, FileOrigin, FileSystem, Language, SentMail, Settings, OFFICIAL_SITE_URL};
-use crate::gfx::{Assets, Rect, Renderer, CELL_H};
+use crate::foundation::{display_name, FileId, FileKind, FileOrigin, FileSystem, Language, SentMail, Settings, MY_COMPUTER_NAME, OFFICIAL_SITE_URL, RECYCLE_BIN_NAME};
+use crate::gfx::{Assets, Rect, Renderer, CELL_H, SCREEN_H, SCREEN_W};
 use crate::secrets;
 use crate::strings::{common, credits, desktop as s, explorer, official_site, settings, t};
 use crate::ui::*;
@@ -366,7 +366,7 @@ impl DesktopScene {
     // 있도록 explorer_app_refreshed 로 되돌려준다 — 안 그러면 항상 첫 탭(Downloads)
     // 으로 튕겨서, 다른 탭을 보던 중에 새로고침이 일어날 때마다 화면이 튀어보인다.
     fn refresh_explorer_if_open(&mut self, settings: &Rc<RefCell<Settings>>) {
-        if let Some(explorer_id) = self.fs.find_by_name("My Computer")
+        if let Some(explorer_id) = self.fs.find_by_name(MY_COMPUTER_NAME)
             && self.wm.is_open(explorer_id)
         {
             let loc = self
@@ -384,7 +384,7 @@ impl DesktopScene {
     // 반영이 안 되는 걸 막는다. RecycleBinApp 은 ExplorerApp 과 달리 탭/위치 상태가
     // 없어서(그냥 목록 하나) open() 으로 통째로 다시 만들면 그만이다.
     fn refresh_recycle_bin_if_open(&mut self, settings: &Rc<RefCell<Settings>>) {
-        if let Some(bin_id) = self.fs.find_by_name("Recycle Bin")
+        if let Some(bin_id) = self.fs.find_by_name(RECYCLE_BIN_NAME)
             && self.wm.is_open(bin_id)
         {
             let op = open(&self.fs, bin_id, settings);
@@ -593,7 +593,7 @@ impl DesktopScene {
         // 직전에 어디 있었는지" 를 기록해서, 나중에 Restore 가 정확히 그 자리로
         // 되돌릴 수 있게 한다. 그 외의 이동(휴지통에서 나가는 것 포함)은 더 이상
         // 그 기록이 필요 없으니 지운다.
-        let into_recycle_bin = matches!(dest, MoveDest::Folder(fid) if self.fs.get(fid).name == "Recycle Bin");
+        let into_recycle_bin = matches!(dest, MoveDest::Folder(fid) if self.fs.get(fid).name == RECYCLE_BIN_NAME);
         for &id in ids {
             // My Computer(FileKind::Explorer)는 실제 Windows 도 그렇듯 폴더/휴지통 안으로
             // 옮길 수 없다 — 휴지통에 들어가면 "Empty Recycle Bin" 한 번으로 영구히
@@ -604,7 +604,7 @@ impl DesktopScene {
             // "쓰레기통에 쓰레기통" 스크린샷) 휴지통을 열면 그 안에 휴지통이 보이는
             // 자기참조 상태가 됐었다.
             if matches!(dest, MoveDest::Folder(_))
-                && (matches!(self.fs.get(id).kind, FileKind::Explorer) || self.fs.get(id).name == "Recycle Bin")
+                && (matches!(self.fs.get(id).kind, FileKind::Explorer) || self.fs.get(id).name == RECYCLE_BIN_NAME)
             {
                 continue;
             }
@@ -724,7 +724,7 @@ impl DesktopScene {
     }
 
     fn start_button_rect(&self) -> Rect {
-        Rect::new(2.0, 480.0 - TASKBAR_H + 3.0, 42.0, TASKBAR_H - 6.0)
+        Rect::new(2.0, SCREEN_H - TASKBAR_H + 3.0, 42.0, TASKBAR_H - 6.0)
     }
 
     fn clock_rect(&self) -> Rect {
@@ -735,7 +735,7 @@ impl DesktopScene {
         // 박스 위아래로 살짝 삐져나와 보였다.
         const W: f32 = 70.0;
         const RIGHT_MARGIN: f32 = 10.0;
-        Rect::new(640.0 - RIGHT_MARGIN - W, 480.0 - TASKBAR_H + 3.0, W, TASKBAR_H - 6.0)
+        Rect::new(SCREEN_W - RIGHT_MARGIN - W, SCREEN_H - TASKBAR_H + 3.0, W, TASKBAR_H - 6.0)
     }
 
     fn wifi_rect(&self) -> Rect {
@@ -748,7 +748,7 @@ impl DesktopScene {
         let (w, h) = (220.0, 78.0); // "Status: Disconnected" 같은 긴 줄이 안 삐져나오게 넉넉히
         let wr = self.wifi_rect();
         let x = (wr.x + wr.w - w).max(4.0);
-        Rect::new(x, 480.0 - TASKBAR_H - h, w, h)
+        Rect::new(x, SCREEN_H - TASKBAR_H - h, w, h)
     }
 
     fn start_menu_rect(&self, r: &Renderer, lang: Language) -> Rect {
@@ -759,7 +759,7 @@ impl DesktopScene {
         // 안 맞는다).
         let max_w = MENU_ITEMS.iter().map(|&k| r.text_width(menu_item_label(lang, k), 1.0)).fold(0.0f32, f32::max);
         let w = max_w + 40.0;
-        Rect::new(2.0, 480.0 - TASKBAR_H - h, w, h)
+        Rect::new(2.0, SCREEN_H - TASKBAR_H - h, w, h)
     }
 
     // 우클릭한 지점 pos 에 메뉴를 띄우되, 화면(작업표시줄 위쪽) 밖으로 안 나가게 clamp.
@@ -767,8 +767,8 @@ impl DesktopScene {
         let h = CONTEXT_MENU_ITEMS.len() as f32 * CTX_ROW_H + 6.0;
         let max_w = CONTEXT_MENU_ITEMS.iter().map(|&k| r.text_width(menu_item_label(lang, k), CTX_TEXT_SCALE)).fold(0.0f32, f32::max);
         let w = max_w + 24.0;
-        let x = pos.0.min(640.0 - w).max(0.0);
-        let y = pos.1.min(480.0 - TASKBAR_H - h).max(0.0);
+        let x = pos.0.min(SCREEN_W - w).max(0.0);
+        let y = pos.1.min(SCREEN_H - TASKBAR_H - h).max(0.0);
         Rect::new(x, y, w, h)
     }
 
@@ -779,7 +779,7 @@ impl DesktopScene {
     fn erase_confirm_layout() -> (Rect, Rect, Rect) {
         let dw = 220.0;
         let dh = 110.0;
-        let dr = Rect::new((640.0 - dw) / 2.0, (480.0 - dh) / 2.0, dw, dh);
+        let dr = Rect::new((SCREEN_W - dw) / 2.0, (SCREEN_H - dh) / 2.0, dw, dh);
         let bw = 80.0;
         let by = dr.y + dr.h - 34.0;
         let erase_btn = Rect::new(dr.x + 12.0, by, bw, 22.0);
@@ -793,7 +793,7 @@ impl DesktopScene {
     // 읽어 블러할 수가 없다) 안 되고, 이 정도가 엔진을 안 뜯어고치고 낼 수 있는
     // 현실적인 타협점이다.
     fn draw_erase_confirm(&self, r: &mut Renderer, _time: f32, mouse: (f32, f32), lang: Language) {
-        r.rect(0.0, 0.0, 640.0, 480.0, [1.0, 1.0, 1.0, 0.4]);
+        r.rect(0.0, 0.0, SCREEN_W, SCREEN_H, [1.0, 1.0, 1.0, 0.4]);
 
         let (dr, erase_btn, cancel_btn) = Self::erase_confirm_layout();
         raised(r, dr.x, dr.y, dr.w, dr.h);
@@ -822,7 +822,7 @@ impl DesktopScene {
     fn idiot_confirm_layout() -> Rect {
         let dw = 200.0;
         let dh = 90.0;
-        let dr = Rect::new((640.0 - dw) / 2.0, (480.0 - dh) / 2.0, dw, dh);
+        let dr = Rect::new((SCREEN_W - dw) / 2.0, (SCREEN_H - dh) / 2.0, dw, dh);
         let bw = 70.0;
         Rect::new(dr.x + (dr.w - bw) / 2.0, dr.y + dr.h - 32.0, bw, 22.0)
     }
@@ -833,11 +833,11 @@ impl DesktopScene {
     // 것도 그래서다(진짜 창이 아니니 애초에 그런 버튼을 그릴 일이 없다) — 오직
     // "Yes" 버튼 하나만 눌러야 닫힌다.
     fn draw_idiot_confirm(&self, r: &mut Renderer, mouse: (f32, f32)) {
-        r.rect(0.0, 0.0, 640.0, 480.0, [0.0, 0.0, 0.0, 0.55]);
+        r.rect(0.0, 0.0, SCREEN_W, SCREEN_H, [0.0, 0.0, 0.0, 0.55]);
 
         let dw = 200.0;
         let dh = 90.0;
-        let dr = Rect::new((640.0 - dw) / 2.0, (480.0 - dh) / 2.0, dw, dh);
+        let dr = Rect::new((SCREEN_W - dw) / 2.0, (SCREEN_H - dh) / 2.0, dw, dh);
         raised(r, dr.x, dr.y, dr.w, dr.h);
 
         // 진짜 창처럼 보이는 파란 타이틀바 — 다만 버튼은 하나도 안 그린다(장식만).
@@ -861,7 +861,7 @@ impl DesktopScene {
     }
 
     fn taskbar_buttons(&self) -> Vec<(u32, String, Rect, bool, bool)> {
-        let ty = 480.0 - TASKBAR_H;
+        let ty = SCREEN_H - TASKBAR_H;
         let items = self.wm.taskbar_items();
         let start_x = 50.0;
         // 와이파이 아이콘이 시계보다 왼쪽에 따로 자리를 차지하고 있어서, 시계 x 좌표까지
@@ -976,8 +976,8 @@ impl DesktopScene {
     }
 
     fn draw_taskbar(&self, r: &mut Renderer, buttons: &[(u32, String, Rect, bool, bool)], time: f32) {
-        let ty = 480.0 - TASKBAR_H;
-        raised(r, 0.0, ty, 640.0, TASKBAR_H);
+        let ty = SCREEN_H - TASKBAR_H;
+        raised(r, 0.0, ty, SCREEN_W, TASKBAR_H);
 
         // 시작 버튼 (저울 아이콘, 문구 없음)
         let sb = self.start_button_rect();
@@ -1107,8 +1107,8 @@ impl DesktopScene {
     fn toast_rect() -> Rect {
         const W: f32 = 190.0;
         const H: f32 = 72.0;
-        let ty = 480.0 - TASKBAR_H;
-        let x = 640.0 - W - 8.0;
+        let ty = SCREEN_H - TASKBAR_H;
+        let x = SCREEN_W - W - 8.0;
         let y = ty - H - 8.0;
         Rect::new(x, y, W, H)
     }
@@ -1213,14 +1213,14 @@ impl DesktopScene {
     // apps/mod.rs::open() 이 그 이름을 보고 ExplorerApp 대신 RecycleBinApp 을 골라준다.
     fn is_drilldown_folder(&self, id: FileId) -> bool {
         let node = self.fs.get(id);
-        matches!(node.kind, FileKind::Folder { .. }) && node.name != "Recycle Bin"
+        matches!(node.kind, FileKind::Folder { .. }) && node.name != RECYCLE_BIN_NAME
     }
 
     // 폴더를(바탕화면 아이콘이든 다른 경로로든) 열 때 항상 이걸 거친다 — My Computer
     // 가 열려있으면 그 창 "안에서" 드릴다운 탭으로 보여주고, 안 열려있으면 My Computer
     // 자체를 이 폴더가 활성 탭인 상태로 새로 연다.
     fn open_folder_in_explorer(&mut self, folder_id: FileId, settings: &Rc<RefCell<Settings>>, work: Rect) {
-        let Some(explorer_id) = self.fs.find_by_name("My Computer") else { return };
+        let Some(explorer_id) = self.fs.find_by_name(MY_COMPUTER_NAME) else { return };
         let app = explorer_app_for_folder(&self.fs, explorer_id, folder_id, settings);
         if self.wm.is_open(explorer_id) {
             self.wm.refresh_app(explorer_id, app);
@@ -1249,8 +1249,8 @@ impl Scene for DesktopScene {
     fn update(&mut self, f: &mut Frame) -> Transition {
         let m = f.input.mouse;
         let click = f.input.mouse_clicked;
-        let ty = 480.0 - TASKBAR_H;
-        let work = Rect::new(0.0, 0.0, 640.0, ty);
+        let ty = SCREEN_H - TASKBAR_H;
+        let work = Rect::new(0.0, 0.0, SCREEN_W, ty);
         let mut consumed = false;
         let mut shutdown = false;
         let mut erase = false;
@@ -1287,7 +1287,7 @@ impl Scene for DesktopScene {
 
         let bg_idx = f.settings.borrow().bg_color_idx;
         let bg_color = crate::foundation::BG_COLORS.get(bg_idx).map_or(TEAL, |(_, c)| *c);
-        f.r.rect(0.0, 0.0, 640.0, 480.0, bg_color);
+        f.r.rect(0.0, 0.0, SCREEN_W, SCREEN_H, bg_color);
 
         // 1) 시작 메뉴 입력
         if self.start_open && click {
@@ -1408,7 +1408,7 @@ impl Scene for DesktopScene {
                     // 잠금 풀린 폴더는 별도 창을 새로 안 띄운다 — File Explorer 가
                     // 열려있으면 그 창 안에서 바로 (원래 있던 카테고리의 하위 폴더로)
                     // 들어가 보여주고, 안 열려있으면 다음에 열 때 자연히 폴더 아이콘으로 보인다.
-                    if let Some(explorer_id) = self.fs.find_by_name("My Computer")
+                    if let Some(explorer_id) = self.fs.find_by_name(MY_COMPUTER_NAME)
                         && self.wm.is_open(explorer_id)
                     {
                         let app = explorer_app_for_folder(&self.fs, explorer_id, id, &f.settings);
@@ -1521,7 +1521,7 @@ impl Scene for DesktopScene {
                     // "Desktop" 항목 위에 놓은 정상 경우) 재확인을 건너뛴다 —
                     // current_location() 은 "지금 보이는 탭"이라, 재확인하면 사이드바에서
                     // 고른 게 아니라 마침 보고 있던 다른 탭 위치로 잘못 덮어써버린다.
-                    let my_computer = self.fs.find_by_name("My Computer");
+                    let my_computer = self.fs.find_by_name(MY_COMPUTER_NAME);
                     let window_at_drop = self.wm.file_at(m);
                     let dest = if matches!(dest, MoveDest::Desktop) && window_at_drop != my_computer {
                         self.explorer_drop_target_at(m)
